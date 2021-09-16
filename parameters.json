@@ -1,0 +1,70 @@
+[
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t3.medium"
+    },
+    {
+        "ParameterKey": "  OperatingSystem",
+        "ParameterValue": "Linux"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Subnet",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "SecurityGroup1",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "IamInstanceProfile",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Userdata",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "name",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Application",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Description",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Team",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Scheduler",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "backup",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Revenue",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "owner",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "Customer",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "LOB",
+        "ParameterValue": ""
+    }
+]

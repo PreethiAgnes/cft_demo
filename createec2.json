@@ -1,0 +1,430 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Cloud Formation Template to Create an EC2 Instance",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Required Parameters"
+                    },
+                    "Parameters": [
+                        "InstanceType",
+                        "AvailabilityZone",
+                        "Application",
+                        "Description",
+                        "Team",
+                        "Scheduler",
+                        "backup",
+                        "Revenue",
+                        "Customer",
+                        "LOB",
+                        "Owner",
+                        "name"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Local account, VPC parameters."
+                    },
+                    "Parameters": [
+                        "KeyName",
+                        "ImageId",
+                        "Subnet",
+                        "SecurityGroup1",
+                        "IamInstanceProfile"
+                    ]
+                }
+            ]
+        }
+    },
+    "Parameters": {
+        "InstanceType": {
+            "Description": "EC2 instance type",
+            "Type": "String",
+            "Default": "t3.medium"
+        },
+        "OperatingSystem": {
+            "Type": "String",
+            "Description": "OS to be installed to an EC2 Instance.",
+            "AllowedValues": [
+                "Linux",
+                "Windows"
+            ],
+            "Default": "Linux",
+            "ConstraintDescription": "Must be either Linux or Windows"
+        },
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instance (Mandatory)",
+            "MinLength": "1",
+            "ConstraintDescription": "SSH KeyPair must not be empty.",
+            "Default": "Provide your pem key"
+        },
+        "Subnet": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Select a subnet appropriate to the tier of the server",
+            "Default": "subnet-"
+        },
+        "SecurityGroup1": {
+            "Type": "AWS::EC2::SecurityGroup::Id",
+            "Description": "Provide the SG ID to allow access to the EC2 on various ports",
+            "Default": "sg-"
+        },
+        "IamInstanceProfile": {
+            "Type": "String",
+            "Description": "Attach IAM role to allow ec2 access",
+            "Default": ""
+        },
+        "Userdata": {
+            "Type": "String",
+            "Description": "Input the ec2 user data details",
+            "Default": ""
+        },
+        "hostname": {
+            "Type": "String",
+            "Description": "keep it to the default value.",
+            "MinLength": "1",
+            "Default": "aor"
+        },
+        "name": {
+            "Type": "String",
+            "Description": "HostName of the machine. This will populate the Name tag on EC2.",
+            "MinLength": "1",
+            "Default": "test"
+        },
+        "Application": {
+            "Type": "String",
+            "Description": "The value of Application",
+            "Default": "creditlens"
+        },
+        "Description": {
+            "Type": "String",
+            "Description": "Description of the Instance",
+            "Default": "my machine"
+        },
+        "Team": {
+            "Type": "String",
+            "Description": "Provide the team that will be using this machine",
+            "Default": "cpo"
+        },
+        "Scheduler": {
+            "Type": "String",
+            "Description": "Provide the value to schedule this machine",
+            "Default": ""
+        },
+        "backup": {
+            "Type": "String",
+            "Description": "Provide the back up tag",
+            "Default": ""
+        },
+        "Revenue": {
+            "Type": "String",
+            "Description": "Revenue",
+            "Default": ""
+        },
+        "owner": {
+            "Type": "String",
+            "Description": "Provide owner of the machine",
+            "Default": ""
+        },
+        "Customer": {
+            "Type": "String",
+            "Description": "Provide the name of the Customer",
+            "Default": ""
+        },
+        "LOB": {
+            "Type": "String",
+            "Description": "Provide LOB value",
+            "Default": ""
+        }
+    },
+    "Conditions": {
+        "IsWindows": {
+            "Fn::Equals": [
+                {
+                    "Ref": "OperatingSystem"
+                },
+                "Windows"
+            ]
+        },
+        "IsUnix": {
+            "Fn::Equals": [
+                {
+                    "Ref": "OperatingSystem"
+                },
+                "Linux"
+            ]
+        }
+    },
+    "Mappings": {
+        "RegionMap": {
+            "us-west-2": {
+                "Linux": "ami-0c6e102894167eccf",
+                "Windows": "ami-086652868369ff3f5"
+            },
+            "us-west-1": {
+                "Linux": "ami-",
+                "Windows": "ami-"
+            }
+        }
+    },
+    "Resources": {
+        "EC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Condition": "IsUnix",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "Linux"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "IamInstanceProfile": {
+                    "Ref": "IamInstanceProfile"
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Sub": "#!/bin/bash\nmkdir test\necho \"setting up postgresql server\"\nyum install -y postgresql*-server postgresql*-contrib\n#verifyinf the postgres server installation\nif systemctl list-unit-files | grep 'postgresql.service';then\necho \"Postgres server Installed\"\nelse\necho \"Postgresql swever not installed\"\nexit 1;\nfi\nsudo -u postgres /usr/bin/initdb --pgdata=/var/lib/pgsql/data --no-locale --encoding UTF-8 --lc-collate C --lc-ctype C\nsystemctl enable postgresql.service\necho \"Enabled the postgresql service\"\necho \"Starting the postgresql service\"\nsystemctl start postgresql.service\n​\n#updating postgresql config file\nsed -i s/\"#listen_addresses = 'localhost'\"/\"listen_addresses = '*'\"/g /var/lib/pgsql/data/postgresql.conf\nsed -i s/\"max_connections = 100\"/\"max_connections = 200\"/g /var/lib/pgsql/data/postgresql.conf\necho \"Updated Postgresql config file\"\necho \"Restarting postgresql service\"\nsystemctl restart postgresql.service\necho \"Altering postgres user\"\npsql -p 5432 -U postgres -c \"ALTER USER postgres PASSWORD 'ABCabc123';\"\n​\nsed -i -e '/^local.*all.*all.*trust$/s/trust/md5/' /var/lib/pgsql/data/pg_hba.conf\nsed -i -e '/^host.*all.*all.*127.0.0.1\\/32.*trust$/s/trust/md5/' /var/lib/pgsql/data/pg_hba.conf\nsed -i '/^host.*all.*all.*127.0.0.1\\/32.*md5$/a host\\tall\\t\\tall\\t\\t0.0.0.0/0\\t\\tmd5' /var/lib/pgsql/data/pg_hba.conf\nsed -i -e '/^host.*all.*all.*::1\\/128.*trust$/s/trust/md5/' /var/lib/pgsql/data/pg_hba.conf\necho \"Updated pg_hba config file\"\necho \"Restarting postgresql service\"\necho \"successfully completed postgresql setup for \" $(psql --version)\nmkdir helloooo\n!Ref Userdata\n"
+                    }
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SecurityGroup1"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "hostname"
+                                    },
+                                    "al",
+                                    {
+                                        "Ref": "name"
+                                    },
+                                    "@domain.com"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    },
+                    {
+                        "Key": "description",
+                        "Value": {
+                            "Ref": "Description"
+                        }
+                    },
+                    {
+                        "Key": "team",
+                        "Value": {
+                            "Ref": "Team"
+                        }
+                    },
+                    {
+                        "Key": "scheduler",
+                        "Value": {
+                            "Ref": "Scheduler"
+                        }
+                    },
+                    {
+                        "Key": "backup",
+                        "Value": {
+                            "Ref": "backup"
+                        }
+                    },
+                    {
+                        "Key": "revenue",
+                        "Value": {
+                            "Ref": "Revenue"
+                        }
+                    },
+                    {
+                        "Key": "customer",
+                        "Value": {
+                            "Ref": "Customer"
+                        }
+                    },
+                    {
+                        "Key": "LOB",
+                        "Value": {
+                            "Ref": "LOB"
+                        }
+                    },
+                    {
+                        "Key": "owner",
+                        "Value": {
+                            "Ref": "owner"
+                        }
+                    }
+                ]
+            }
+        },
+        "WinEC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Condition": "IsWindows",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "Windows"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "IamInstanceProfile": {
+                    "Ref": "IamInstanceProfile"
+                },
+                "UserData": {
+                    "Fn::Base64": "<script>\nmkdir C:\\Downloads\\testdir\n!Ref Userdata\n<script>\n"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SecurityGroup1"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "hostname"
+                                    },
+                                    "aw",
+                                    {
+                                        "Ref": "name"
+                                    },
+                                    "@domain.com"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    },
+                    {
+                        "Key": "description",
+                        "Value": {
+                            "Ref": "Description"
+                        }
+                    },
+                    {
+                        "Key": "team",
+                        "Value": {
+                            "Ref": "Team"
+                        }
+                    },
+                    {
+                        "Key": "scheduler",
+                        "Value": {
+                            "Ref": "Scheduler"
+                        }
+                    },
+                    {
+                        "Key": "backup",
+                        "Value": {
+                            "Ref": "backup"
+                        }
+                    },
+                    {
+                        "Key": "revenue",
+                        "Value": {
+                            "Ref": "Revenue"
+                        }
+                    },
+                    {
+                        "Key": "customer",
+                        "Value": {
+                            "Ref": "Customer"
+                        }
+                    },
+                    {
+                        "Key": "LOB",
+                        "Value": {
+                            "Ref": "LOB"
+                        }
+                    },
+                    {
+                        "Key": "owner",
+                        "Value": {
+                            "Ref": "owner"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "InstanceId": {
+            "Description": "InstanceId of the newly created EC2 instance",
+            "Value": {
+                "Ref": "EC2Instance"
+            },
+            "Condition": "IsUnix"
+        },
+        "WinInstanceId": {
+            "Description": "InstanceId of the newly created Windows EC2 instance",
+            "Value": {
+                "Ref": "WinEC2Instance"
+            },
+            "Condition": "IsWindows"
+        },
+        "AZ": {
+            "Description": "Availability Zone of the newly created EC2 instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "EC2Instance",
+                    "AvailabilityZone"
+                ]
+            },
+            "Condition": "IsUnix"
+        },
+        "WinAZ": {
+            "Description": "Availability Zone of the newly created Windows EC2 instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "EC2Instance",
+                    "AvailabilityZone"
+                ]
+            },
+            "Condition": "IsWindows"
+        }
+    }
+}
